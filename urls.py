@@ -39,12 +39,15 @@ urlpatterns = patterns(
     url(r'^event/image/(?P<pk>[0-9]+)$', ImageToEventCreate.as_view(), name='event.image'), # Event Detail
     url(r'^event/galery/(?P<pk>[0-9]+)$', ImageToGaleryCreate.as_view(), name='event.galery'), # Event Galery
     
+    url(r'^eventtype/$', EventTypeList.as_view() , name='eventtype.list'), # Event list
+    url(r'^eventtype/(?P<pk>[0-9]+)$', EventTypeDetail.as_view(), name='eventtype.detail'), # Event Detail
+    
     url(r'^competition/$', CompetitionList.as_view() , name='competition.list'), # Competition List
     url(r'^competition/(?P<pk>[0-9]+)$', CompetitionDetail.as_view(), name='competition.detail'), # Competition Detail
     url(r'^competition/byevent/$', CompetitionListByEvent.as_view(), name='competition.byevent'), # Competition by event list
     url(r'^competition/categories/$', CategoryListByCompetition.as_view(), name='competition.categories'), # Categories by competition_id
     url(r'^competition/image/(?P<pk>[0-9]+)$', ImageToCompetitionCreate.as_view(), name='competition.image'), # Competition Detail
-
+    #RegisterByCompetitionList
     url(r'^competitiontype/$', CompetitionTypeList.as_view() , name='competitiontype.list'), # Competition type List
     url(r'^competitiontype/(?P<pk>[0-9]+)$', CompetitionTypeDetail.as_view(), name='competitiontype.detail'), # Competition type Detail
     
@@ -55,14 +58,19 @@ urlpatterns = patterns(
     url(r'^register/$', RegisterList.as_view() , name='register.list'), # Register type List
     url(r'^register/(?P<pk>[0-9]+)$', RegisterDetail.as_view(), name='register.detail'), # Register type Detail
     url(r'^register/competitornum/(?P<pk>[0-9]+)$', RegisterCompetitorNumber.as_view(), name='register.competitor_num'), # Get the Register competitor number
+    url(r'^register/bycompetition/$', RegisterByCompetitionList.as_view(), name='register.bycompetition'), # Competition by event list
     
     url(r'^timereg/$', TimeRegList.as_view() , name='timereg.list'), # Time Reg type List
     url(r'^timereg/(?P<pk>[0-9]+)$', TimeRegDetail.as_view(), name='timereg.detail'), # Time Reg type Detail
+    url(r'^timereg/byregister/$', TimeRegByRegisterList.as_view(), name='timereg.byregister'), # Competition by event list
     
     url(r'^authentication/$', AuthenticationList.as_view() , name='authentication.list'), # Authentication type List
     url(r'^authentication/(?P<pk>[0-9]+)$', AuthenticationDetail.as_view(), name='authentication.detail'), # Authentication type Detail
     
     url(r'^competitor/$', CompetitorList.as_view() , name='competitor.list'), # Competitor type List
     url(r'^competitor/(?P<pk>[0-9]+)$', CompetitorDetail.as_view(), name='competitor.detail'), # Competitor type Detail
+    
+    url(r'^team/$', TeamList.as_view() , name='team.list'), # TEam type List
+    url(r'^team/(?P<pk>[0-9]+)$', TeamDetail.as_view(), name='team.detail'), # Team  Detail
     
 ) # End of url patterns

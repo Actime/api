@@ -20,17 +20,18 @@ from .Permissions import QuietBasicAuthentication # Custom permissions
 # Import classes 
 from states.models import KitState, RegisterState
 from customusers.models import Rol, UserSystem
-from events.models import Event, Competition, CompetitionType, Category
-from competitors.models import TimeReg, Register, Authentication, Competitor
+from events.models import Event, Competition, CompetitionType, Category, EventType
+from competitors.models import TimeReg, Register, Authentication, Competitor, Team
 from .imgur import *
 # Import Serializers
 from states.serializers import KitStateSerializer, RegisterStateSerializer
 from customusers.serializers import RolSerializer, UserSystemSerializer, UserSerializer
-from events.serializers import EventSerializer, CompetitionSerializer, CompetitionTypeSerializer, CategorySerializer
-from competitors.serializers import TimeRegSerializer, RegisterSerializer, AuthenticationSerializer, CompetitorSerializer
+from events.serializers import EventSerializer, CompetitionSerializer, CompetitionTypeSerializer, CategorySerializer, EventTypeSerializer
+from competitors.serializers import TimeRegSerializer, RegisterSerializer, AuthenticationSerializer, CompetitorSerializer, TeamSerializer
 # Image decode shit
 from PIL import Image
 from base64 import *
+import datetime
 
 """ Users module """
 
@@ -188,6 +189,53 @@ class RegisterList( generics.ListCreateAPIView ) :
 # End of Register List class
 
 """
+Register by event list
+"""
+class RegisterByCompetitionList( generics.ListAPIView ) :
+    # Authentiction classes
+    authentication_classes = ( QuietBasicAuthentication, )
+    # Query Set
+    queryset = Register.objects.all()
+    # Serializer class
+    serializer_class = RegisterSerializer
+    # Get query set function
+    def get_queryset(self) :
+        """
+        get_queryset
+        function that returns the queryset of the api view class
+        returns a queryset
+        """
+        # get the event id from the request
+        competition_id = self.request.GET['competition_id']
+        # filter the objects and then return them
+        return Register.objects.filter(competition=competition_id)
+    # End of get_query
+    # List function definition
+    def list( self, request, *args, **kwargs ):
+        """ 
+        list
+        fuction that list all the objects of the model
+        returns a serialized json response
+        """
+        instance = self.filter_queryset( self.get_queryset() )
+        # Getp
+        page = self.paginate_queryset( instance )
+        # Verify pagination
+        if page is not None :
+            serializer = self.get_pagination_serializer( page )
+        else:
+            serializer = self.get_serializer( instance, many=True )
+        # This format is for iOS to rec. the data in a better way
+        data = {
+            "data" : serializer.data
+        }
+        # Return response with json serialized data
+        return Response( data )
+    #End of list function
+    
+# End of Register By Event list api view
+
+"""
 Register Detail Api View
 """
 class RegisterDetail( generics.RetrieveUpdateDestroyAPIView ) :
@@ -242,8 +290,114 @@ class TimeRegList( generics.ListCreateAPIView ) :
         # Return response with json serialized data
         return Response( data )
     # End of list function 
+    def create(self, request, *args, **kwargs):
+        """
+        Create function
+        This will just work for our custom post function
+        hehe pretty lazy if you ask me :)
+        """
+        response_data = list()
+        for d_t in request.data :
+            # Serialize the object we ha
+            event = Event.objects.get( pk = int( d_t["event_id"] ) )
+            # get competitions event
+            competitions = Competition.objects.filter( competition_event = event.pk )
+            register = None
+            # loop for getting the right competition
+            for c in competitions :
+                try :
+                    # find the register matching competition and competitors number
+                    register = Register.objects.filter( competition = c.pk ).get( competitor_num = int(d_t["competitor_num"]) )
+                except( Register.DoesNotExist ) :
+                    pass # pass if shit
+            # if the register exists
+            if register :
+                # New time register
+                time_reg = TimeReg()
+                # Set the register on the time register variable
+                time_reg.register = register
+                # format time
+                d = datetime.datetime.strptime(d_t["time"], '%H:%M:%S')
+                # set the time on the time register
+                time_reg.time = d.time()
+                # if it is saved
+                try :
+                    # Save the register; 
+                    # working so far, serializer not working, not losin' time on that .l.
+                    time_reg.save()
+                    # on data field
+                    data= {
+                        "id" : time_reg.id,
+                        "register" : time_reg.register.pk,
+                        "time" : time_reg.time,
+                        "timestamp" : time_reg.timestamp,
+                        "updated" : time_reg.updated
+                    }
+                    # return the response data
+                    response_data.append(data)
+                except Exception as e: # otherwise
+                    # On data variable the exception message
+                    data = {
+                        "data" : e.message()
+                    }
+                    # return the serialized data
+                    response_data.append(data)
+                # End of saved validation
+            # End of register validation
+            else :
+                data = {
+                    "data" : None
+                }
+                response_data.append(data)
+            # End of register validation
+        # End of for of all the shit
+        return Response({ 'data' : response_data })
+    # End of create function
 # End of Time Reg List class
 
+class TimeRegByRegisterList( generics.ListAPIView ) :
+    # Authentiction classes
+    authentication_classes = ( QuietBasicAuthentication, )
+    # Query Set
+    queryset = TimeReg.objects.all()
+    # Serializer class
+    serializer_class = TimeRegSerializer
+    # Retrieve function definition
+    def get_queryset(self) :
+        """
+        get_queryset
+        function that returns the queryset of the api view class
+        returns a queryset
+        """
+        # get the event id from the request
+        register_id = self.request.GET['register_id']
+        # filter the objects and then return them
+        return TimeReg.objects.filter(register=register_id)
+    # End of get_query
+    # List function definition
+    def list( self, request, *args, **kwargs ):
+        """ 
+        list
+        fuction that list all the objects of the model
+        returns a serialized json response
+        """
+        instance = self.filter_queryset( self.get_queryset() )
+        # Getp
+        page = self.paginate_queryset( instance )
+        # Verify pagination
+        if page is not None :
+            serializer = self.get_pagination_serializer( page )
+        else:
+            serializer = self.get_serializer( instance, many=True )
+        # This format is for iOS to rec. the data in a better way
+        data = {
+            "data" : serializer.data
+        }
+        # Return response with json serialized data
+        return Response( data )
+    #End of list function
+    
+# End of time register by register list api view
 """
 Time Reg Detail Api View
 """
@@ -440,6 +594,59 @@ class EventDetail( generics.RetrieveUpdateDestroyAPIView ) :
         return Response(data)
     # End of retrieve function
 # End of Event Detail class
+
+class EventTypeList( generics.ListCreateAPIView ) :
+    # Authentiction classes
+    authentication_classes = ( QuietBasicAuthentication, )
+    # Query Set
+    queryset = EventType.objects.all()
+    # Serializer class
+    serializer_class = EventTypeSerializer
+    # list function definition
+    def list( self, request, *args, **kwargs ):
+        """ 
+        list
+        fuction that list all the objects of the model
+        returns a serialized json response
+        """
+        instance = self.filter_queryset( self.get_queryset() )
+        # Getp
+        page = self.paginate_queryset( instance )
+        # Verify pagination
+        if page is not None :
+            serializer = self.get_pagination_serializer( page )
+        else:
+            serializer = self.get_serializer( instance, many=True )
+        # This format is for iOS to rec. the data in a better way
+        data = {
+            "data" : serializer.data
+        }
+        # Return response with json serialized data
+        return Response( data )
+    # End of list function 
+# End of EventTypeList class
+    
+"""
+EventType Detail Api View
+"""
+class EventTypeDetail( generics.RetrieveUpdateDestroyAPIView ) :
+    # Authentiction classes
+    authentication_classes = ( QuietBasicAuthentication, )
+    # Query Set
+    queryset = EventType.objects.all()
+    # Serializer class
+    serializer_class = EventTypeSerializer
+    # Retrieve function definition
+    def retrieve(self, request, *args, **kwargs):
+        """ retrive the model with id """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = { 
+            "data" : serializer.data
+        }
+        return Response(data)
+    # End of retrieve function
+# End of EventType Detail class
 
 """
 CompetitionList Api View
@@ -897,6 +1104,7 @@ class ImageToCompetitionCreate( APIView ) :
         """
         # Get the object by primary key
         competition = self.get_object( pk )
+        print( competition )
         # Competition serializer
         copmetition_serializer = CompetitionSerializer( competition )
         # Get the images from the pettition
@@ -908,7 +1116,7 @@ class ImageToCompetitionCreate( APIView ) :
         # Save the image on the competition
         save_image_competition( "imageToSave.png", competition.id )
         # return the competition serialized
-        return Response( copmetition_serializer )
+        return Response( copmetition_serializer.data )
     # End of put function
 # End of ImageToCompetitionCreate view class
 
@@ -1173,3 +1381,63 @@ class UserLogin( generics.CreateAPIView ) :
         # End of user validation
     # End of create function
 # End of UserLogin class
+
+"""
+Team list 
+GET; POST;
+"""
+class TeamList( generics.ListCreateAPIView ) :
+    # Authentiction classes
+    authentication_classes = ( QuietBasicAuthentication, )
+    # Query Set
+    queryset = Team.objects.all()
+    # Serializer class
+    serializer_class = TeamSerializer
+    # List function definition
+    def list( self, request, *args, **kwargs ):
+        """ 
+        list
+        fuction that list all the objects of the model
+        returns a serialized json response
+        """
+        instance = self.filter_queryset( self.get_queryset() )
+        # Getp
+        page = self.paginate_queryset( instance )
+        # Verify pagination
+        if page is not None :
+            serializer = self.get_pagination_serializer( page )
+        else:
+            serializer = self.get_serializer( instance, many=True )
+        # This format is for iOS to rec. the data in a better way
+        data = {
+            "data" : serializer.data
+        }
+        # Return response with json serialized data
+        return Response( data )
+    # End of list function 
+    
+# End of team list api view
+
+"""
+Team detail 
+GET; DELETE; UPDATE
+"""
+class TeamDetail(  generics.UpdateAPIView ) :
+    # Authentiction classes
+    authentication_classes = ( QuietBasicAuthentication, )
+    # Query Set
+    queryset = Team.objects.all()
+    # Serializer class
+    serializer_class = TeamSerializer
+    # Retrieve function definition
+    def retrieve(self, request, *args, **kwargs):
+        """ retrive the model with id """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = { 
+            "data" : serializer.data
+        }
+        return Response(data)
+    # End of retrieve function
+#End of team detail api view class
+
