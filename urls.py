@@ -33,11 +33,16 @@ urlpatterns = patterns(
     url(r'^user/(?P<pk>[0-9]+)$', UserDetail.as_view(), name='user.detail'), # User Detail
     url(r'^user/login/$', UserLogin.as_view(), name='user.login'), # User Login
     
-    # Events module  ImageToGaleryCreate
+    # Events module  ImageToGaleryCreate GaleryList
     url(r'^event/$', EventList.as_view() , name='event.list'), # Event list
     url(r'^event/(?P<pk>[0-9]+)$', EventDetail.as_view(), name='event.detail'), # Event Detail
     url(r'^event/image/(?P<pk>[0-9]+)$', ImageToEventCreate.as_view(), name='event.image'), # Event Detail
-    url(r'^event/galery/(?P<pk>[0-9]+)$', ImageToGaleryCreate.as_view(), name='event.galery'), # Event Galery
+    url(r'^event/gallery/(?P<pk>[0-9]+)$', ImageToGaleryCreate.as_view(), name='event.galery'), # Event Galery
+    url(r'^gallery/$', GaleryList.as_view(), name='event.galery.list'), # Event prizes
+    url(r'^gallery/(?P<pk>[0-9]+)$', GaleryDetail.as_view(), name='event.galery.detail'), # Event Galery
+    url(r'^prize/$', PriceList.as_view(), name='event.prizes'), # Event prizes
+    url(r'^prize/(?P<pk>[0-9]+)$', PriceDetail.as_view(), name='event.prize.detail'), # Event prizes
+    url(r'^prize/image/(?P<pk>[0-9]+)$', ImageToPrizeCreate.as_view(), name='event.prize.image'), # Event Detail
     
     url(r'^eventtype/$', EventTypeList.as_view() , name='eventtype.list'), # Event list
     url(r'^eventtype/(?P<pk>[0-9]+)$', EventTypeDetail.as_view(), name='eventtype.detail'), # Event Detail

@@ -48,7 +48,7 @@ def save_image_competition( file, competition_id ) :
     os.remove( file )
 #End of the save_image function
 
-def save_image_to_galery( file, event_id ) :
+def save_image_to_galery( file, event ) :
     """
     Save galery image
     this method process the file for saving it to the imgur server
@@ -56,8 +56,6 @@ def save_image_to_galery( file, event_id ) :
     """
     # post on imgur and give the imgur response     
     json_shit = client.upload_from_path( file, config=None, anon=True)
-    # get the event with the id
-    event = Event.objects.get( pk = event_id )
     # set new galery model
     galery = Galery()
     # Set the event
@@ -70,7 +68,7 @@ def save_image_to_galery( file, event_id ) :
     os.remove( file )
 # End of save_image_to_galery
 
-def save_image_to_price( file, event_id, price_id ) :
+def save_image_to_price( file, price ) :
     """
     Save image to pice table
     this method process the file for saving it to the imgur server
@@ -78,10 +76,6 @@ def save_image_to_price( file, event_id, price_id ) :
     """
     # post on imgur and give the imgur response
     json_shit = client.upload_from_path( file, config=None, anon=True )
-    # get the event with the id 
-    event = Event.objects.get( pk = event_id )
-    # Set the price model
-    price = Price.objects.get( pk = price_id )
     # Set the image
     price.image_url = json_shit['link']
     # Save the price

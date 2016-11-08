@@ -13,20 +13,22 @@ from django.http import Http404, JsonResponse
 from django.contrib.auth.models import User
 from django.core import serializers
 # Rest framework imports
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from .Permissions import QuietBasicAuthentication # Custom permissions 
 # Import classes 
 from states.models import KitState, RegisterState
 from customusers.models import Rol, UserSystem
-from events.models import Event, Competition, CompetitionType, Category, EventType
+from events.models import Event, Competition, CompetitionType, Category, EventType, Price, Galery
 from competitors.models import TimeReg, Register, Authentication, Competitor, Team
 from .imgur import *
 # Import Serializers
 from states.serializers import KitStateSerializer, RegisterStateSerializer
 from customusers.serializers import RolSerializer, UserSystemSerializer, UserSerializer
-from events.serializers import EventSerializer, CompetitionSerializer, CompetitionTypeSerializer, CategorySerializer, EventTypeSerializer
+from events.serializers import EventSerializer, CompetitionSerializer, CompetitionTypeSerializer, CategorySerializer, EventTypeSerializer, PriceSerializer, GalerySerializer
 from competitors.serializers import TimeRegSerializer, RegisterSerializer, AuthenticationSerializer, CompetitorSerializer, TeamSerializer
 # Image decode shit
 from PIL import Image
@@ -98,7 +100,7 @@ Object list and creation
 """
 class UserSystemList( generics.ListCreateAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( QuietBasicAuthentication, IsAuthenticated )
     # Query Set
     queryset = UserSystem.objects.all()
     # Serializer class
@@ -132,7 +134,7 @@ User System Detail Api View
 """
 class UserSystemDetail( generics.RetrieveUpdateDestroyAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( QuietBasicAuthentication, IsAuthenticated )
     # Query Set
     queryset = UserSystem.objects.all()
     # Serializer class
@@ -159,7 +161,8 @@ Object list and creation
 """
 class RegisterList( generics.ListCreateAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = Register.objects.all()
     # Serializer class
@@ -538,13 +541,80 @@ class CompetitorDetail( generics.RetrieveUpdateDestroyAPIView ) :
 
 """ Events module """
 
+
+class PriceList( generics.ListCreateAPIView ) :
+    # Authentication classes
+    authentication_classes = ( BasicAuthentication, )
+    # permission classes
+    permission_classes = ( IsAuthenticated, )
+    # query set definition
+    queryset = Price.objects.all()
+    # serializer class
+    serializer_class = PriceSerializer
+    # get queryset function
+    def get_queryset(self) :
+        """
+        get_queryset
+        function that returns the queryset of the api view class
+        returns a queryset
+        """
+        # get the event id from the request
+        event_id = self.request.GET['event_id']
+        # get the object and then return it or return a 404 if it doesn't exist 
+        event = get_object_or_404( Event, pk = event_id )
+        # get the prices from the db
+        prices = Price.objects.filter( event = event.id )
+        # return the categories
+        return prices
+    # End of get_query
+    
+    def list( self, request, *args, **kwargs ):
+        """ 
+        list
+        fuction that list all the objects of the model
+        returns a serialized json response
+        """
+        instance = self.filter_queryset( self.get_queryset() )
+        # Getp
+        page = self.paginate_queryset( instance )
+        # Verify pagination
+        if page is not None :
+            serializer = self.get_pagination_serializer( page )
+        else:
+            serializer = self.get_serializer( instance, many=True )
+        # This format is for iOS to rec. the data in a better way
+        data = {
+            "data" : serializer.data
+        }
+        # Return response with json serialized data
+        return Response( data )
+    # End of list function 
+# End of PriceSerializer class
+
+class PriceDetail( generics.RetrieveUpdateDestroyAPIView ) :
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
+    queryset = Price.objects.all()
+    serializer_class = PriceSerializer
+    def retrieve(self, request, *args, **kwargs):
+        """ retrive the model with id """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        data = { 
+            "data" : serializer.data
+        }
+        return Response(data)
+    # End of retrieve function
+# End of Price detail class
+
 """
 EventList Api View
 Object list and creation
 """
 class EventList( generics.ListCreateAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = Event.objects.all()
     # Serializer class
@@ -578,7 +648,8 @@ Event Detail Api View
 """
 class EventDetail( generics.RetrieveUpdateDestroyAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = Event.objects.all()
     # Serializer class
@@ -597,7 +668,8 @@ class EventDetail( generics.RetrieveUpdateDestroyAPIView ) :
 
 class EventTypeList( generics.ListCreateAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = EventType.objects.all()
     # Serializer class
@@ -631,7 +703,8 @@ EventType Detail Api View
 """
 class EventTypeDetail( generics.RetrieveUpdateDestroyAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = EventType.objects.all()
     # Serializer class
@@ -711,7 +784,8 @@ Object list and creation
 """
 class CompetitionListByEvent( generics.ListAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = Competition.objects.all()
     # Serializer class
@@ -817,7 +891,8 @@ Object list and creation
 """
 class CategoryList( generics.ListCreateAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = Category.objects.all()
     # Serializer class
@@ -851,7 +926,8 @@ Category Detail Api View
 """
 class CategoryDetail( generics.RetrieveUpdateDestroyAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = Category.objects.all()
     # Serializer class
@@ -929,7 +1005,8 @@ Object list and creation
 """
 class KitStateList( generics.ListCreateAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = KitState.objects.all()
     # Serializer class
@@ -963,7 +1040,8 @@ Kit State Detail Api View
 """
 class KitStateDetail( generics.RetrieveUpdateDestroyAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = KitState.objects.all()
     # Serializer class
@@ -985,8 +1063,9 @@ Register State List Api View
 Object list and creation
 """
 class RegisterStateList( generics.ListCreateAPIView ) :
-    # Authentication classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    # Authentiction classes
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set variable
     queryset = RegisterState.objects.all()
     # Serializer class
@@ -1020,7 +1099,8 @@ Register State Detail Api View
 """
 class RegisterStateDetail( generics.RetrieveUpdateDestroyAPIView ) :
     # Authentiction classes
-    authentication_classes = ( QuietBasicAuthentication, )
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
     # Query Set
     queryset = RegisterState.objects.all()
     # Serializer class
@@ -1139,14 +1219,12 @@ class ImageToGaleryCreate( APIView ) :
             raise Http404
     # End of get_object function
     
-    def put( self, request, pk, format=None ) :
+    def post( self, request, pk, format=None ) :
         """
         When postin the gallery image
         """
         # Get the object by primary key
         event = self.get_object( pk )
-        # Competition serializer
-        event_serializer = EventSerializer( event )
         # Get the images from the pettition
         fh = open( "imageToSave.png", "wb" )
         # Write the file
@@ -1154,11 +1232,44 @@ class ImageToGaleryCreate( APIView ) :
         # Close the file
         fh.close()
         # Save the image on the competition
-        save_image_to_galery( "imageToSave.png", event.id )
+        save_image_to_galery( "imageToSave.png", event )
         # return the competition serialized
-        return Response( event_serializer )
+        return Response( EventSerializer( event ).data )
     # End of put function
 # End of ImageToGaleryCreate view class
+
+class ImageToPrizeCreate( APIView ) :
+    def get_object( self, pk ) :
+        """
+        Get object function
+        """
+        try :
+            # Get the object by the primary key
+            return Price.objects.get( pk=pk )
+        except Price.DoesNotExist :
+            # Return a 404 error if not found in the db
+            raise Http404
+    # End of get_object function
+    def put( self, request, pk, format=None ) :
+        """
+        When postin the gallery image
+        """
+        # Get the object by primary key
+        price = self.get_object( pk )
+        # ^rize serializer
+        price_serializer = PriceSerializer( price )
+        # Get the images from the pettition
+        fh = open( "imageToSave.png", "wb" )
+        # Write the file
+        fh.write( request.data.decode( "base64" ) )
+        # Close the file
+        fh.close()
+        # Save the image on the price
+        save_image_to_price( "imageToSave.png", price )
+        # return the price serialized
+        return Response( PriceSerializer( price ).data )
+    # End of put function
+# End of ImageTo Prize Create Class
 
 ###### Using images and shit
 
@@ -1353,6 +1464,7 @@ class UserLogin( generics.CreateAPIView ) :
         user = User()
         user.username = request.data["username"]
         user.password = request.data["password"]
+        print( user.username, " " , user.password )
         # Need to get the user from the username we have 
         user_from_db = self.get_object( user.username )
         # Data variable
@@ -1373,11 +1485,13 @@ class UserLogin( generics.CreateAPIView ) :
                 response = Response(data)
                 return response 
             else :
+                data["data"] = { "error" : "Password didn't match." }
                 # Return the response data empty
-                return Response( data )
+                return Response( data, status=status.HTTP_404_NOT_FOUND )
         else :
             # Return the response data empty
-            return Response( data )
+            data[ "data" ] = { "error" : "This user doesn't exist." }
+            return Response( data, status=status.HTTP_404_NOT_FOUND )
         # End of user validation
     # End of create function
 # End of UserLogin class
@@ -1441,3 +1555,66 @@ class TeamDetail(  generics.UpdateAPIView ) :
     # End of retrieve function
 #End of team detail api view class
 
+class GaleryList( generics.ListAPIView ) :
+    # Authentication classes
+    authentication_classes = ( BasicAuthentication, )
+    # permission classes
+    permission_classes = ( IsAuthenticated, )
+    # query set definition
+    queryset = Galery.objects.all()
+    # serializer class
+    serializer_class = GalerySerializer
+    # get queryset function
+    def get_queryset(self) :
+        """
+        get_queryset
+        function that returns the queryset of the api view class
+        returns a queryset
+        """
+        # get the event id from the request
+        event_id = self.request.GET['event_id']
+        # get the object and then return it or return a 404 if it doesn't exist 
+        event = get_object_or_404( Event, pk = event_id )
+        # get the prices from the db
+        galeries = Galery.objects.filter( event = event.id )
+        # return the categories
+        return galeries
+    # End of get_query
+    
+    def list( self, request, *args, **kwargs ):
+        """ 
+        list
+        fuction that list all the objects of the model
+        returns a serialized json response
+        """
+        instance = self.filter_queryset( self.get_queryset() )
+        # Getp
+        page = self.paginate_queryset( instance )
+        # Verify pagination
+        if page is not None :
+            serializer = self.get_pagination_serializer( page )
+        else:
+            serializer = self.get_serializer( instance, many=True )
+        # This format is for iOS to rec. the data in a better way
+        data = {
+            "data" : serializer.data
+        }
+        # Return response with json serialized data
+        return Response( data )
+    # End of list function 
+# End of PriceSerializer class
+# End of GaleryList view class
+
+class GaleryDetail( generics.RetrieveUpdateDestroyAPIView ) :
+    authentication_classes = ( BasicAuthentication, )
+    permission_classes = ( IsAuthenticated, )
+    queryset = Galery.objects.all()
+    serializer_class = GalerySerializer
+    def retrieve( self, request, *args, **kwargs ) :
+        """ retrieve the model with id """
+        instance = self.get_object()
+        serializer = self.get_serializer( instance )
+        data = { "data" : serializer.data }
+        return Response( data )
+    # End of retrieve function
+# End of Galery Detail view class
