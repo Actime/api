@@ -9,6 +9,10 @@ Date - Tuesday, January 5, 2016
 # Imports
 from django.conf.urls import patterns, url
 from .views import *
+from states.api_views import *
+from customusers.api_views import *
+from competitors.api_views import *
+from events.api_views import *
 
 # Url patterns
 urlpatterns = patterns(
